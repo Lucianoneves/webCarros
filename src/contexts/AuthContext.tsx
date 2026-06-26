@@ -1,7 +1,9 @@
 
 
-import { onAuthStateChanged } from 'firebase/auth';
+
+
 import { createContext,  type ReactNode, useState, useEffect } from 'react'
+import { onAuthStateChanged } from 'firebase/auth';
 import { auth } from '../services/firebaseConnection';
 
 
@@ -15,11 +17,14 @@ interface AuthProviderProps {
 type AuthContextData = {
    signed: boolean;
    loadingAuth: boolean;
+   handleInfoUser: (user: UserProps) => void;
+   user: UserProps | null;
+
 
 }
 
 interface UserProps{
-    id: string;
+    uid: string;
     name: string | null;
     email: string | null;
 }
@@ -27,7 +32,7 @@ interface UserProps{
    export const AuthContext = createContext({} as AuthContextData)
    
    function AuthProvider({children}: AuthProviderProps) {
-       const [user, setUser] = useState <UserProps | null>(null)
+       const [user, setUser] = useState <UserProps | null>(null) 
        const [loadingAuth, setLoadingAuth] = useState(true)
 
        useEffect(() =>{
@@ -35,7 +40,7 @@ interface UserProps{
         const unsub = onAuthStateChanged(auth, (user) => {
           if(user){
             setUser({
-              id: user.uid,
+              uid: user.uid,
               name: user?.displayName,
               email: user?.email,
             })
@@ -52,7 +57,16 @@ interface UserProps{
             unsub()
         }
 
-       })
+       }, [])
+
+       function handleInfoUser({name,email,uid}: UserProps){
+        setUser({
+          name,
+          email,
+          uid,
+        })
+      
+       }
 
 
     return (
@@ -60,7 +74,8 @@ interface UserProps{
          value={{
           signed: !!user,
           loadingAuth,
-          
+          handleInfoUser,
+          user,
         }}
         >         
         {children}

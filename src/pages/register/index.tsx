@@ -1,15 +1,16 @@
 
-import { useEffect } from 'react'
+import { useContext } from 'react'
 import logoImg from '../../assets/logo.svg'
 import { Link, useNavigate } from 'react-router-dom' 
-import {Container} from '../../components/container'
-import {Input} from '../../components/input'
-import {useForm}from 'react-hook-form'
-import {z} from 'zod'
-import {zodResolver} from '@hookform/resolvers/zod'
+import { Container } from '../../components/container'
+import { Input } from '../../components/input'
+import { useForm } from 'react-hook-form'
+import { z } from 'zod'
+import { zodResolver } from '@hookform/resolvers/zod'
 
-import {auth} from '../../services/firebaseConnection'
-import {createUserWithEmailAndPassword, signOut, updateProfile} from 'firebase/auth'
+import { auth } from '../../services/firebaseConnection'
+import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth' 
+import { AuthContext } from '../../contexts/AuthContext'
 
 
 
@@ -21,7 +22,9 @@ import {createUserWithEmailAndPassword, signOut, updateProfile} from 'firebase/a
 
  type FormData = z.infer<typeof schema>
 
-export function Register() {
+export function Register() { 
+  const { handleInfoUser } = useContext(AuthContext)
+
   const navigate = useNavigate()
   const {register,handleSubmit, formState: {errors} } = useForm<FormData>({
     resolver: zodResolver(schema),
@@ -29,33 +32,30 @@ export function Register() {
   })
 
 
-  
-    useEffect(() => {
-     async function handleLogout(){
-      await signOut(auth)
-      navigate("/login", { replace: true})
-     }
-  
-     handleLogout();
-    }, [])
+  async function onSubmit(data: FormData) {
+    try {
+      const userCredential = await createUserWithEmailAndPassword(
+        auth,
+        data.email,
+        data.password
+      )
 
-
-   async function onSubmit(data: FormData) {
-    createUserWithEmailAndPassword(auth, data.email, data.password)
-    .then(async (user) => {
-      await updateProfile(user.user, {
+      await updateProfile(userCredential.user, {
         displayName: data.name,
       })
 
-      console.log("Cadastro realizado com sucesso!")
-      navigate("/dashboard", { replace: true})
-    })
-    
-    .catch((error) => {
-      console.log("Erro ao realizar cadastro")
+      handleInfoUser({
+        name: data.name,
+        email: data.email,
+        uid: userCredential.user.uid,
+      })
+
+      console.log('Cadastro realizado com sucesso!')
+      navigate('/dashboard', { replace: true })
+    } catch (error) {
+      console.log('Erro ao realizar cadastro')
       console.log(error)
-    })
-    console.log(data)
+    }
   }
 
 
