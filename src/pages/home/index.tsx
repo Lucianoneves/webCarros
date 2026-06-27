@@ -8,6 +8,7 @@ import {
   query,
   getDocs,
   orderBy,
+  where,
 } from 'firebase/firestore'
 import { db } from '../../services/firebaseConnection'
 
@@ -31,6 +32,7 @@ interface CarImageProps{
 export function Home() {
   const [cars, setCars] = useState<CarsProps[]>([])
  const [loadImages, setLoadImages] = useState<string[]>([])
+ const [input,setInput] = useState('')
 
 
 
@@ -52,6 +54,12 @@ export function Home() {
   }
 
   useEffect(() => { // carregar os carros do firebase
+    loadCars()
+  }, [])
+
+
+
+
     function loadCars(){
       const carsRef = collection(db, 'cars')
       const queryRef = query(carsRef, orderBy('created', 'desc'))
@@ -76,21 +84,72 @@ export function Home() {
             })
           })
 
-   
+       
 
           setCars(listCars)
+   
+
         })
         .catch((error) => {
           console.log(error)
         })
-    }
+      }
 
-    loadCars()
-  }, [])
+
+  
+  
 
   function handleOnLoad(id:string){ // caregar as imagens 
     setLoadImages((prevImageLoaded) => [...prevImageLoaded, id])
   }
+
+ async function handleSearchCar(){
+
+  if(input.trim() === ''){
+    loadCars()
+    return
+  }
+
+
+  const q = query(
+    collection(db, 'cars'),
+    where('name', '>=', input.toUpperCase()),
+    where('name', '<=', input.toUpperCase() + '\uf8ff')
+  )
+
+
+  const querySnapshot = await getDocs(q)
+
+
+
+
+  const listCars = [] as CarsProps[]
+
+
+  querySnapshot.forEach((doc)=>{
+
+    const data = doc.data() as Omit<CarsProps,'id'>
+
+
+    listCars.push({
+      id: doc.id,
+      uid: data.uid,
+      name: data.name,
+      model: data.model,
+      price: data.price,
+      year: data.year,
+      km: data.km,
+      city: data.city,
+      images: data.images ?? []
+    })
+
+  })
+
+  setCars(listCars)
+
+
+
+}
   
 
 
@@ -100,10 +159,13 @@ export function Home() {
       <input 
       className='w-full border-2 rounded-lg h-9 px-3 outline-none'
       placeholder='Digite o nome do carro..'
+      value={input}
+      onChange={(e)=> setInput (e.target.value)}
       />
 
       <button 
-      className='bg-red-500 h-9 px-8 rounded-lg text-white font-medium text-lg'
+      className='bg-red-500 h-9 px-8 rounded-lg text-white font-medium text-lg cursor-pointer'
+      onClick={handleSearchCar}
       >
         Buscar
       </button>

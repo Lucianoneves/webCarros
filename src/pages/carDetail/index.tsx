@@ -2,10 +2,16 @@
 import { useEffect, useState } from 'react'
 import { Container } from '../../components/container'
 import { FaWhatsapp } from 'react-icons/fa'
-import { useParams } from 'react-router-dom'
+import { useParams, useNavigate } from 'react-router-dom'
 
 import { getDoc, doc } from 'firebase/firestore'
 import { db } from '../../services/firebaseConnection'
+
+import { Swiper, SwiperSlide } from 'swiper/react'
+import 'swiper/css'
+import 'swiper/css/navigation'
+import 'swiper/css/pagination'
+import { Pagination } from 'swiper/modules'
 
 
 
@@ -23,7 +29,7 @@ interface CarsProps {
   owner: string;
   uid: string;
   whatsapp: string;
-  images: string[]
+  images: ImagesCarProps[]
 
 }
 
@@ -37,6 +43,9 @@ export function CarDetail() {
   const { id } = useParams()
   console.log("ID DO CARRO:", id);
   const [car, setCar] = useState<CarsProps>()
+  const [swiperPerView, setSwiperPerView] = useState<number>()
+  const navigate = useNavigate()
+
 
 
   useEffect(() => {
@@ -46,6 +55,13 @@ export function CarDetail() {
       const docRef = doc(db, "cars", id)
       getDoc(docRef)
         .then((snapshot) => {
+
+
+
+          if (!snapshot.data()) {
+            navigate("/")
+
+          }
           setCar({
             id: snapshot.id,
             name: snapshot.data()?.name || '',
@@ -64,17 +80,64 @@ export function CarDetail() {
           })
         })
 
+
+
     }
 
     loadCar()
   }, [id])
+
+  useEffect(() => {
+    function handleResize() {
+      if (window.innerWidth < 720) {
+        setSwiperPerView(1)
+      } else {
+        setSwiperPerView(2)
+      }
+    }
+
+    handleResize()
+
+    window.addEventListener('resize', handleResize)
+
+    return () => {
+      window.removeEventListener('resize', handleResize)
+    }
+  })
 
 
 
 
   return (
     <Container>
-      <h1> Detalhes doCarro</h1>
+
+      {car && (
+        <Swiper
+          modules={[Pagination]}
+          slidesPerView={swiperPerView}
+          pagination={{ clickable: true }}
+          navigation
+        >
+
+          {car?.images.map(image => (
+
+            <SwiperSlide key={image.publicId}>
+
+              <img
+                src={image.url}
+                className="w-full h-96 object-cover"
+              />
+
+            </SwiperSlide>
+
+          ))}
+
+        </Swiper>
+      )}
+
+
+
+
 
       {car && (
         <main className=' w-full bg-zinc-200 rounded-lg p-6 my-4'>
@@ -113,6 +176,8 @@ export function CarDetail() {
             <p>{car?.whatsapp}</p>
 
             <a
+            href={`https://api.whatsapp.com/send?phone=${car?.whatsapp}&text=${encodeURIComponent(`Olá, quero saber mais sobre esse carro ${car?.name}`)}`}
+            target='_blank'
               className=' cursor-pointer bg-green-600 w-full text-white flex  flex-items justify-center gap-2 my-6 h-11 text-xl rounded-lg font-medium'
             >
               Conversar com Vendedor

@@ -9,8 +9,9 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { AuthContext } from '../../../contexts/AuthContext'
 import { v4 as uuidV4 } from 'uuid'
 
-import { db } from '../../../services/firebaseConnection' 
+import { db } from '../../../services/firebaseConnection'
 import { addDoc, collection } from 'firebase/firestore'
+import { toast } from "react-toastify";
 
 const schema = z.object({
   name: z.string().nonempty("O campo nome é obrigatório"),
@@ -35,7 +36,7 @@ type CloudinaryUploadResponse = {
   };
 };
 
-interface ImageItemProps{
+interface ImageItemProps {
   id: string;
   previewUrl: string;
   file: File;
@@ -49,13 +50,13 @@ export function New() {
   })
 
   const [carImages, setCarImages] = useState<ImageItemProps[]>([])
-  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [isSubmitting, setIsSubmitting] = useState(false) // Para evitar envios duplicados
 
   const cloudName = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME as string | undefined;
   const uploadPreset = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET as string | undefined;
 
-  async function uploadToCloudinary(file: File): Promise<{ url: string; publicId: string }>{
-    if(!cloudName || !uploadPreset){
+  async function uploadToCloudinary(file: File): Promise<{ url: string; publicId: string }> {
+    if (!cloudName || !uploadPreset) {
       throw new Error('Cloudinary não configurado. Defina VITE_CLOUDINARY_CLOUD_NAME e VITE_CLOUDINARY_UPLOAD_PRESET')
     }
 
@@ -70,23 +71,23 @@ export function New() {
 
     const data = (await response.json()) as CloudinaryUploadResponse;
 
-    if(!response.ok || !data.secure_url || !data.public_id){
+    if (!response.ok || !data.secure_url || !data.public_id) {
       throw new Error(data.error?.message ?? 'Falha ao enviar imagem para o Cloudinary')
     }
 
     return { url: data.secure_url, publicId: data.public_id };
   }
 
-  function handleFile(e: ChangeEvent<HTMLInputElement>){
+  function handleFile(e: ChangeEvent<HTMLInputElement>) {
     const files = e.target.files;
-    if(!files || files.length === 0){
+    if (!files || files.length === 0) {
       return;
     }
 
     const image = files[0]
 
-    if(image.type !== 'image/jpeg' && image.type !== 'image/png'){
-      alert("Envie uma imagem jpeg ou png!")
+    if (image.type !== 'image/jpeg' && image.type !== 'image/png') {
+      toast("Envie uma imagem jpeg ou png!")
       return;
     }
 
@@ -96,27 +97,27 @@ export function New() {
       file: image,
     }
 
-    setCarImages((images) => [...images, imageItem] )
+    setCarImages((images) => [...images, imageItem])
     e.target.value = ''
   }
 
-  async function onSubmit(data: NewCarFormData){
+  async function onSubmit(data: NewCarFormData) {
 
-    if(isSubmitting){
+    if (isSubmitting) {
       return;
     }
 
-    if(carImages.length === 0){
-      alert('Selecione pelo menos 1 imagem')
+    if (carImages.length === 0) {
+      toast('Selecione pelo menos 1 imagem')
       return;
     }
 
-    if(!user?.uid){
-      alert('Você precisa estar logado para cadastrar')
+    if (!user?.uid) {
+      toast('Você precisa estar logado para cadastrar')
       return;
     }
 
-    try{
+    try {
       setIsSubmitting(true)
 
       const uploadedImages = await Promise.all(
@@ -124,10 +125,10 @@ export function New() {
       )
 
       const carListImages = uploadedImages.map((img) => {
-        return{
+        return {
           url: img.url,
           publicId: img.publicId,
-        
+
         }
       })
 
@@ -149,19 +150,19 @@ export function New() {
       carImages.forEach((item) => URL.revokeObjectURL(item.previewUrl))
       reset();
       setCarImages([]);
-      console.log("CADASTRADO COM SUCESSO!");
+      toast("CADASTRADO COM SUCESSO!");
 
-    }catch(error){
+    } catch (error) {
       console.log(error)
       const message = error instanceof Error ? error.message : 'Erro ao cadastrar'
-      alert(message)
-    }finally{
+      toast(message)
+    } finally {
       setIsSubmitting(false)
     }
 
   }
 
-  function handleDeleteImage(item: ImageItemProps){
+  function handleDeleteImage(item: ImageItemProps) {
     URL.revokeObjectURL(item.previewUrl)
     setCarImages((images) => images.filter((img) => img.id !== item.id))
   }
@@ -169,7 +170,7 @@ export function New() {
 
   return (
     <Container>
-      <DashboardHeader/>
+      <DashboardHeader />
 
       <div className="w-full bg-white p-3 rounded-lg flex flex-col sm:flex-row items-center gap-2 cursor-pointer">
         <button className="border-2 w-48 rounded-lg flex items-center justify-center  border-gray-600 h-32 md:w-48 cursor-pointer">
@@ -177,18 +178,18 @@ export function New() {
             <FiUpload size={30} color="#000" />
           </div>
           <div className="cursor-pointer">
-            <input 
-              type="file" 
-              accept="image/*" 
-              className="opacity-0 cursor-pointer" 
-              onChange={handleFile} 
+            <input
+              type="file"
+              accept="image/*"
+              className="opacity-0 cursor-pointer"
+              onChange={handleFile}
             />
           </div>
         </button>
 
-        {carImages.map( item => (
+        {carImages.map(item => (
           <div key={item.id} className="w-full h-32 flex items-center justify-center relative cursor-pointer">
-            <button className="absolute" onClick={() => handleDeleteImage(item) }>
+            <button className="absolute" onClick={() => handleDeleteImage(item)}>
               <FiTrash size={28} color="#FFF" />
             </button>
             <img
@@ -203,7 +204,7 @@ export function New() {
       <div className="w-full bg-white p-3 rounded-lg flex flex-col sm:flex-row items-center gap-2 mt-2">
         <form
           className="w-full"
-          onSubmit={handleSubmit(onSubmit)}  
+          onSubmit={handleSubmit(onSubmit)}
         >
           <div className="mb-3">
             <p className="mb-2 font-medium">Nome do carro</p>
@@ -301,7 +302,7 @@ export function New() {
             {errors.description && <p className="mb-1 text-red-500">{errors.description.message}</p>}
           </div>
 
-          <button type="submit" disabled={isSubmitting} className="w-full rounded-md bg-zinc-900 text-white font-medium h-10 disabled:opacity-60 disabled:cursor-not-allowed">
+          <button type="submit" disabled={isSubmitting} className=" cursor-pointer w-full rounded-md bg-zinc-900 text-white font-medium h-10 disabled:opacity-60 disabled:cursor-not-allowed">
             {isSubmitting ? 'Cadastrando...' : 'Cadastrar'}
           </button>
 
